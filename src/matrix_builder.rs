@@ -1,5 +1,7 @@
 use crate::{CountMatrix, Error, Matrix, Result};
 use lineariterator::slice_ref_iterator::SliceRefIterator;
+use simplefield::field::Field;
+use simplefield::orientation::RowMajor;
 use token_db::TokenDb;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -43,7 +45,8 @@ impl<'a> MatrixBuilder<'a> {
             return Err(Error::InvalidWindowSize);
         }
 
-        let mut matrix = CountMatrix::new(self.token_db.len());
+        let size = self.token_db.len();
+        let mut values = vec![0_u64; size * size];
 
         for window in SliceRefIterator::new(self.tokens, window_size) {
             for left in 0..window.len() {
@@ -51,14 +54,20 @@ impl<'a> MatrixBuilder<'a> {
                     let row = window[left] as usize;
                     let column = window[right] as usize;
 
-                    matrix.increment(row, column)?;
+                    increment(&mut values, size, row, column)?;
                     if row != column {
-                        matrix.increment(column, row)?;
+                        increment(&mut values, size, column, row)?;
                     }
                 }
             }
         }
 
-        Ok(matrix)
+        Ok(Field::<RowMajor, u64>::new_data(size, size, values))
     }
+}
+
+fn increment(values: &mut [u64], size: usize, row: usize, column: usize) -> Result<()> {
+    let value = &mut values[row * size + column];
+    *value = value.checked_add(1).ok_or(Error::CountOverflow)?;
+    Ok(())
 }
