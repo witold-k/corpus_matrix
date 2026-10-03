@@ -47,7 +47,7 @@ impl<'a> MatrixBuilder<'a> {
 
         for window in SliceRefIterator::new(self.tokens, window_size) {
             for left in 0..window.len() {
-                for right in left..window.len() {
+                for right in (left + 1)..window.len() {
                     let row = window[left] as usize;
                     let column = window[right] as usize;
 
