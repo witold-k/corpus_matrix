@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Witold Kaminski
 
-use crate::{CountMatrix, Error, Matrix, Result};
-use simplefield::field::Field;
-use simplefield::orientation::RowMajor;
+mod count;
+mod ppmi;
+
+use crate::{Error, Matrix, Result};
 use token_db::{TokenDb, TokenId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -25,6 +26,15 @@ pub enum MatrixType {
     /// This is intentionally a simple baseline heuristic intended for later
     /// weighting, such as PPMI.
     Count { window_size: usize },
+
+    /// Builds a positive pointwise mutual information matrix from the
+    /// co-occurrence counts produced with the same `window_size` semantics as
+    /// the count matrix.
+    ///
+    /// For a non-zero count `c(i,j)`, the matrix value is
+    /// `max(0, ln(c(i,j) * total / (row(i) * column(j))))`.
+    /// Zero counts and non-positive PMI values become zero.
+    Ppmi { window_size: usize },
 }
 
 pub struct MatrixBuilder<'a> {
@@ -43,7 +53,10 @@ impl<'a> MatrixBuilder<'a> {
 
         match matrix_type {
             MatrixType::Count { window_size } => {
-                self.build_count_matrix(window_size).map(Matrix::Count)
+                count::build(self.token_db, self.tokens, window_size).map(Matrix::Count)
+            }
+            MatrixType::Ppmi { window_size } => {
+                ppmi::build(self.token_db, self.tokens, window_size).map(Matrix::Ppmi)
             }
         }
     }
@@ -57,35 +70,4 @@ impl<'a> MatrixBuilder<'a> {
         }
         Ok(())
     }
-
-    fn build_count_matrix(&self, window_size: usize) -> Result<CountMatrix> {
-        if window_size == 0 {
-            return Err(Error::InvalidWindowSize);
-        }
-
-        let size = self.token_db.len();
-        let mut values = vec![0_u64; size * size];
-
-        for left in 0..self.tokens.len() {
-            let end = left.saturating_add(window_size).min(self.tokens.len());
-
-            for right in (left + 1)..end {
-                let row = self.tokens[left].get() as usize;
-                let column = self.tokens[right].get() as usize;
-
-                increment(&mut values, size, row, column)?;
-                if row != column {
-                    increment(&mut values, size, column, row)?;
-                }
-            }
-        }
-
-        Ok(Field::<RowMajor, u64>::new_data(size, size, values))
-    }
-}
-
-fn increment(values: &mut [u64], size: usize, row: usize, column: usize) -> Result<()> {
-    let value = &mut values[row * size + column];
-    *value = value.checked_add(1).ok_or(Error::CountOverflow)?;
-    Ok(())
 }
