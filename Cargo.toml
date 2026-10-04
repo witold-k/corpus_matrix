@@ -4,3 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+lineariterator = { version = "0.1.0", git = "https://github.com/witold-k/lineariterator", rev = "4ab7a6eb620b85ecff6b872b9879960a8b713bfe" }
+token_db = { version = "0.1.0", git = "https://github.com/witold-k/token_db", rev = "a347088581b40d53f1b0d288004e5be771736e9d" }
+simplefield = { version = "0.1.0", git = "https://github.com/witold-k/simplefield", rev = "32efb7204b7044d369eccb50e2f5d9ad5414a0b8" }
