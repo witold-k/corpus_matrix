@@ -1,11 +1,25 @@
 use crate::{CountMatrix, Error, Matrix, Result};
-use lineariterator::slice_ref_iterator::SliceRefIterator;
 use simplefield::field::Field;
 use simplefield::orientation::RowMajor;
 use token_db::{TokenDb, TokenId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MatrixType {
+    /// Builds a symmetric token co-occurrence count matrix.
+    ///
+    /// `window_size` is the number of consecutive token positions considered
+    /// together. Two token positions co-occur when their distance is smaller
+    /// than `window_size`.
+    ///
+    /// Each pair of positions is counted exactly once, independent of how many
+    /// overlapping windows could contain that pair. All distances have equal
+    /// weight.
+    ///
+    /// Equal token IDs at different positions are counted, so diagonal entries
+    /// may be non-zero.
+    ///
+    /// This is intentionally a simple baseline heuristic intended for later
+    /// weighting, such as PPMI.
     Count { window_size: usize },
 }
 
@@ -48,16 +62,16 @@ impl<'a> MatrixBuilder<'a> {
         let size = self.token_db.len();
         let mut values = vec![0_u64; size * size];
 
-        for window in SliceRefIterator::new(self.tokens, window_size) {
-            for left in 0..window.len() {
-                for right in (left + 1)..window.len() {
-                    let row = window[left].get() as usize;
-                    let column = window[right].get() as usize;
+        for left in 0..self.tokens.len() {
+            let end = left.saturating_add(window_size).min(self.tokens.len());
 
-                    increment(&mut values, size, row, column)?;
-                    if row != column {
-                        increment(&mut values, size, column, row)?;
-                    }
+            for right in (left + 1)..end {
+                let row = self.tokens[left].get() as usize;
+                let column = self.tokens[right].get() as usize;
+
+                increment(&mut values, size, row, column)?;
+                if row != column {
+                    increment(&mut values, size, column, row)?;
                 }
             }
         }
