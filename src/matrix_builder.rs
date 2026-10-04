@@ -7,13 +7,14 @@ use token_db::{TokenDb, TokenId};
 pub enum MatrixType {
     /// Builds a symmetric token co-occurrence count matrix.
     ///
-    /// `window_size` is the number of consecutive token positions considered
-    /// together. Two token positions co-occur when their distance is smaller
-    /// than `window_size`.
+    /// A window starts at each token position and contains at most
+    /// `window_size` consecutive positions. The first token in the window is
+    /// the reference token. It is paired once with every following token in
+    /// that window. The window then advances by one position.
     ///
-    /// Each pair of positions is counted exactly once, independent of how many
-    /// overlapping windows could contain that pair. All distances have equal
-    /// weight.
+    /// Consequently, two token positions co-occur when their distance is
+    /// smaller than `window_size`. Each pair of positions is counted exactly
+    /// once, and all distances within the window have equal weight.
     ///
     /// Equal token IDs at different positions are counted, so diagonal entries
     /// may be non-zero.
