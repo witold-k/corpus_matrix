@@ -16,6 +16,10 @@ fn value(matrix: &corpus_matrix::CountMatrix, row: usize, column: usize) -> u64 
     matrix.get_data()[row * matrix.column_count() + column]
 }
 
+fn ppmi_value(matrix: &corpus_matrix::PpmiMatrix, row: usize, column: usize) -> f64 {
+    matrix.get_data()[row * matrix.column_count() + column]
+}
+
 #[test]
 fn counts_each_cooccurring_position_pair_once() {
     let db = token_db();
@@ -92,4 +96,47 @@ fn rejects_zero_window_size() {
         builder.build(MatrixType::Count { window_size: 0 }),
         Err(Error::InvalidWindowSize)
     ));
+}
+
+#[test]
+fn builds_ppmi_from_count_matrix() {
+    let db = token_db();
+    let a = db.id("a").unwrap();
+    let b = db.id("b").unwrap();
+    let c = db.id("c").unwrap();
+    let tokens = [a, b, c, b];
+    let builder = MatrixBuilder::new(&db, &tokens);
+
+    let Matrix::Ppmi(matrix) = builder
+        .build(MatrixType::Ppmi { window_size: 3 })
+        .unwrap()
+    else {
+        panic!("expected PPMI matrix");
+    };
+
+    let expected_ab = (9.0_f64 / 8.0).ln();
+    let expected_ac = (3.0_f64 / 2.0).ln();
+
+    assert!((ppmi_value(&matrix, 0, 1) - expected_ab).abs() < 1.0e-12);
+    assert!((ppmi_value(&matrix, 1, 0) - expected_ab).abs() < 1.0e-12);
+    assert!((ppmi_value(&matrix, 0, 2) - expected_ac).abs() < 1.0e-12);
+    assert!((ppmi_value(&matrix, 1, 2) - expected_ac).abs() < 1.0e-12);
+    assert_eq!(ppmi_value(&matrix, 1, 1), 0.0);
+}
+
+#[test]
+fn empty_cooccurrence_matrix_produces_zero_ppmi() {
+    let db = token_db();
+    let a = db.id("a").unwrap();
+    let tokens = [a];
+    let builder = MatrixBuilder::new(&db, &tokens);
+
+    let Matrix::Ppmi(matrix) = builder
+        .build(MatrixType::Ppmi { window_size: 3 })
+        .unwrap()
+    else {
+        panic!("expected PPMI matrix");
+    };
+
+    assert!(matrix.get_data().iter().all(|&value| value == 0.0));
 }
