@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 // Copyright (c) 2026 Witold Kaminski
 
-use crate::{CountMatrix, Error, Matrix, PpmiMatrix, Result};
-use simplefield::field::Field;
-use simplefield::orientation::RowMajor;
+mod count;
+mod ppmi;
+
+use crate::{Error, Matrix, Result};
 use token_db::{TokenDb, TokenId};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,10 +53,10 @@ impl<'a> MatrixBuilder<'a> {
 
         match matrix_type {
             MatrixType::Count { window_size } => {
-                self.build_count_matrix(window_size).map(Matrix::Count)
+                count::build(self.token_db, self.tokens, window_size).map(Matrix::Count)
             }
             MatrixType::Ppmi { window_size } => {
-                self.build_ppmi_matrix(window_size).map(Matrix::Ppmi)
+                ppmi::build(self.token_db, self.tokens, window_size).map(Matrix::Ppmi)
             }
         }
     }
@@ -69,75 +70,4 @@ impl<'a> MatrixBuilder<'a> {
         }
         Ok(())
     }
-
-    fn build_count_matrix(&self, window_size: usize) -> Result<CountMatrix> {
-        if window_size == 0 {
-            return Err(Error::InvalidWindowSize);
-        }
-
-        let size = self.token_db.len();
-        let mut values = vec![0_u64; size * size];
-
-        for left in 0..self.tokens.len() {
-            let end = left.saturating_add(window_size).min(self.tokens.len());
-
-            for right in (left + 1)..end {
-                let row = self.tokens[left].get() as usize;
-                let column = self.tokens[right].get() as usize;
-
-                increment(&mut values, size, row, column)?;
-                if row != column {
-                    increment(&mut values, size, column, row)?;
-                }
-            }
-        }
-
-        Ok(Field::<RowMajor, u64>::new_data(size, size, values))
-    }
-
-    fn build_ppmi_matrix(&self, window_size: usize) -> Result<PpmiMatrix> {
-        let counts = self.build_count_matrix(window_size)?;
-        let size = counts.row_count();
-        let count_values = counts.get_data();
-
-        let mut marginals = vec![0.0_f64; size];
-        let mut total = 0.0_f64;
-
-        for row in 0..size {
-            for column in 0..size {
-                let count = count_values[row * size + column] as f64;
-                marginals[row] += count;
-                total += count;
-            }
-        }
-
-        let mut values = vec![0.0_f64; size * size];
-
-        if total > 0.0 {
-            for row in 0..size {
-                for column in 0..size {
-                    let count = count_values[row * size + column] as f64;
-                    if count == 0.0 {
-                        continue;
-                    }
-
-                    let denominator = marginals[row] * marginals[column];
-                    if denominator == 0.0 {
-                        continue;
-                    }
-
-                    let pmi = (count * total / denominator).ln();
-                    values[row * size + column] = pmi.max(0.0);
-                }
-            }
-        }
-
-        Ok(Field::<RowMajor, f64>::new_data(size, size, values))
-    }
-}
-
-fn increment(values: &mut [u64], size: usize, row: usize, column: usize) -> Result<()> {
-    let value = &mut values[row * size + column];
-    *value = value.checked_add(1).ok_or(Error::CountOverflow)?;
-    Ok(())
 }
