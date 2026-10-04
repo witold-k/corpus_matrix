@@ -14,7 +14,7 @@ fn value(matrix: &corpus_matrix::CountMatrix, row: usize, column: usize) -> u64 
 }
 
 #[test]
-fn builds_symmetric_sliding_window_counts() {
+fn counts_each_cooccurring_position_pair_once() {
     let db = token_db();
     let a = db.id("a").unwrap();
     let b = db.id("b").unwrap();
@@ -32,9 +32,26 @@ fn builds_symmetric_sliding_window_counts() {
     assert_eq!(value(&matrix, 1, 0), 1);
     assert_eq!(value(&matrix, 0, 2), 1);
     assert_eq!(value(&matrix, 2, 0), 1);
-    assert_eq!(value(&matrix, 1, 2), 3);
-    assert_eq!(value(&matrix, 2, 1), 3);
+    assert_eq!(value(&matrix, 1, 2), 2);
+    assert_eq!(value(&matrix, 2, 1), 2);
     assert_eq!(value(&matrix, 1, 1), 1);
+}
+
+#[test]
+fn window_size_includes_distance_window_size_minus_one_only() {
+    let db = token_db();
+    let a = db.id("a").unwrap();
+    let b = db.id("b").unwrap();
+    let c = db.id("c").unwrap();
+    let tokens = [a, b, c, b];
+    let builder = MatrixBuilder::new(&db, &tokens);
+
+    let Matrix::Count(matrix) = builder
+        .build(MatrixType::Count { window_size: 3 })
+        .unwrap();
+
+    assert_eq!(value(&matrix, 0, 2), 1);
+    assert_eq!(value(&matrix, 0, 1), 1);
 }
 
 #[test]
