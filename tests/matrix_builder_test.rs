@@ -16,7 +16,10 @@ fn value(matrix: &corpus_matrix::CountMatrix, row: usize, column: usize) -> u64 
 #[test]
 fn builds_symmetric_sliding_window_counts() {
     let db = token_db();
-    let tokens = [0, 1, 2, 1];
+    let a = db.id("a").unwrap();
+    let b = db.id("b").unwrap();
+    let c = db.id("c").unwrap();
+    let tokens = [a, b, c, b];
     let builder = MatrixBuilder::new(&db, &tokens);
 
     let Matrix::Count(matrix) = builder
@@ -29,27 +32,35 @@ fn builds_symmetric_sliding_window_counts() {
     assert_eq!(value(&matrix, 1, 0), 1);
     assert_eq!(value(&matrix, 0, 2), 1);
     assert_eq!(value(&matrix, 2, 0), 1);
-    assert_eq!(value(&matrix, 1, 2), 2);
-    assert_eq!(value(&matrix, 2, 1), 2);
+    assert_eq!(value(&matrix, 1, 2), 3);
+    assert_eq!(value(&matrix, 2, 1), 3);
     assert_eq!(value(&matrix, 1, 1), 1);
 }
 
 #[test]
 fn rejects_token_ids_outside_database() {
-    let db = token_db();
-    let tokens = [0, 3];
+    let mut db = TokenDb::new();
+    let valid = db.insert("a").unwrap();
+
+    let mut other_db = TokenDb::new();
+    other_db.insert("a").unwrap();
+    let invalid = other_db.insert("b").unwrap();
+
+    let tokens = [valid, invalid];
     let builder = MatrixBuilder::new(&db, &tokens);
 
     assert!(matches!(
         builder.build(MatrixType::Count { window_size: 2 }),
-        Err(Error::InvalidTokenId(3))
+        Err(Error::InvalidTokenId(id)) if id == invalid
     ));
 }
 
 #[test]
 fn rejects_zero_window_size() {
     let db = token_db();
-    let tokens = [0, 1];
+    let a = db.id("a").unwrap();
+    let b = db.id("b").unwrap();
+    let tokens = [a, b];
     let builder = MatrixBuilder::new(&db, &tokens);
 
     assert!(matches!(
