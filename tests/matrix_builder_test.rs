@@ -31,7 +31,10 @@ fn counts_each_cooccurring_position_pair_once() {
 
     let Matrix::Count(matrix) = builder
         .build(MatrixType::Count { window_size: 3 })
-        .unwrap();
+        .unwrap()
+    else {
+        panic!("expected count matrix");
+    };
 
     assert_eq!(matrix.row_count(), 3);
     assert_eq!(matrix.column_count(), 3);
@@ -55,7 +58,10 @@ fn each_window_pairs_only_its_reference_token_with_following_tokens() {
 
     let Matrix::Count(matrix) = builder
         .build(MatrixType::Count { window_size: 3 })
-        .unwrap();
+        .unwrap()
+    else {
+        panic!("expected count matrix");
+    };
 
     // [a, b, c] contributes a-b and a-c from reference a.
     // [b, c, b] contributes b-c and b-b from reference b.
