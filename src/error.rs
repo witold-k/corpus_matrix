@@ -1,8 +1,9 @@
 use std::fmt;
+use token_db::TokenId;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Error {
-    InvalidTokenId(u32),
+    InvalidTokenId(TokenId),
     InvalidWindowSize,
     CountOverflow,
 }
@@ -10,7 +11,7 @@ pub enum Error {
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::InvalidTokenId(id) => write!(f, "token ID {id} is outside the token database"),
+            Self::InvalidTokenId(id) => write!(f, "token ID {} is outside the token database", id.get()),
             Self::InvalidWindowSize => write!(f, "window size must be greater than zero"),
             Self::CountOverflow => write!(f, "matrix count overflow"),
         }
