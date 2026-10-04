@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 Witold Kaminski
+
 use crate::{CountMatrix, Error, Matrix, Result};
 use simplefield::field::Field;
 use simplefield::orientation::RowMajor;

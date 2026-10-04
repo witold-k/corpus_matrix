@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright (c) 2026 Witold Kaminski
+
 use corpus_matrix::{Error, Matrix, MatrixBuilder, MatrixType};
 use token_db::TokenDb;
 
