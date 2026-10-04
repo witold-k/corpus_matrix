@@ -38,7 +38,7 @@ fn counts_each_cooccurring_position_pair_once() {
 }
 
 #[test]
-fn window_size_includes_distance_window_size_minus_one_only() {
+fn each_window_pairs_only_its_reference_token_with_following_tokens() {
     let db = token_db();
     let a = db.id("a").unwrap();
     let b = db.id("b").unwrap();
@@ -50,8 +50,13 @@ fn window_size_includes_distance_window_size_minus_one_only() {
         .build(MatrixType::Count { window_size: 3 })
         .unwrap();
 
-    assert_eq!(value(&matrix, 0, 2), 1);
+    // [a, b, c] contributes a-b and a-c from reference a.
+    // [b, c, b] contributes b-c and b-b from reference b.
+    // [c, b] contributes c-b from reference c.
     assert_eq!(value(&matrix, 0, 1), 1);
+    assert_eq!(value(&matrix, 0, 2), 1);
+    assert_eq!(value(&matrix, 1, 2), 2);
+    assert_eq!(value(&matrix, 1, 1), 1);
 }
 
 #[test]
