@@ -1,5 +1,5 @@
 [package]
-name = "corpus_matrix"
+name = "retrieval"
 version = "0.1.0"
 edition = "2024"
 
